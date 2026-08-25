@@ -20,7 +20,7 @@ router.get("/attendance/me", async (req, res) => {
     );
     const activeSession = sessions.find((session) => session.status === "checked_in");
     res.json({
-      employeeName: "Jordan M.",
+      employeeName: "Abebe",
       currentStatus: activeSession ? "checked_in" : "checked_out",
       activeSession: activeSession
         ? {

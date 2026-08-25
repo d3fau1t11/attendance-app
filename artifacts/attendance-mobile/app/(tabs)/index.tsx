@@ -27,7 +27,7 @@ import { useColors } from '@/hooks/useColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const QUEUE_KEY = 'attendance.pending-events';
-const workplace = { id: 'hq-nairobi', name: 'Nairobi HQ', latitude: -1.2864, longitude: 36.8172, radius: 150 };
+const workplace = { id: 'hq-addis', name: 'Addis Ababa HQ', latitude: 9.0192, longitude: 38.7468, radius: 150 };
 
 function makeEvent(eventType: 'check_in' | 'check_out', qrToken: string, coords: Location.LocationObject): AttendanceEventInput {
   return {
@@ -143,10 +143,10 @@ export default function HomeScreen() {
             <View style={styles.topbar}>
               <View>
                 <Text style={[styles.eyebrow, { color: colors.primary }]}>MONDAY, 24 AUG</Text>
-                <Text style={[styles.greeting, { color: colors.foreground }]}>Good morning, Jordan</Text>
+                <Text style={[styles.greeting, { color: colors.foreground }]}>Good morning, Abebe</Text>
               </View>
               <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-                <Text style={[styles.avatarText, { color: colors.primary }]}>JM</Text>
+                <Text style={[styles.avatarText, { color: colors.primary }]}>A</Text>
               </View>
             </View>
             <View style={[styles.statusCard, { backgroundColor: colors.primary }]}>
