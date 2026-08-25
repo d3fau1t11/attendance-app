@@ -1,0 +1,190 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: attendance
+    description: Employee attendance operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /attendance/me:
+    get:
+      operationId: getMyAttendance
+      tags: [attendance]
+      summary: Get the current employee attendance overview
+      responses:
+        "200":
+          description: Attendance overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceOverview"
+  /attendance/check-in:
+    post:
+      operationId: checkIn
+      tags: [attendance]
+      summary: Record a QR and GPS verified check-in event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceEventInput"
+      responses:
+        "201":
+          description: Attendance session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceSession"
+  /attendance/check-out:
+    post:
+      operationId: checkOut
+      tags: [attendance]
+      summary: Record a check-out event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceEventInput"
+      responses:
+        "201":
+          description: Attendance session closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceSession"
+  /attendance/events/sync:
+    post:
+      operationId: syncAttendanceEvents
+      tags: [attendance]
+      summary: Synchronize offline attendance events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/AttendanceEventInput"
+      responses:
+        "200":
+          description: Synchronization result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    AttendanceEventInput:
+      type: object
+      required: [eventId, eventType, workplaceId, occurredAt, latitude, longitude, accuracyMeters, qrToken]
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          enum: [check_in, check_out]
+        workplaceId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracyMeters:
+          type: number
+        qrToken:
+          type: string
+        isMockLocation:
+          type: boolean
+        source:
+          type: string
+          enum: [online, offline, background]
+    AttendanceSession:
+      type: object
+      required: [id, status, workplaceName, checkInAt]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [checked_in, checked_out, needs_review]
+        workplaceName:
+          type: string
+        checkInAt:
+          type: string
+          format: date-time
+        checkOutAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMinutes:
+          type: number
+    AttendanceOverview:
+      type: object
+      required: [employeeName, currentStatus, sessions, pendingEvents]
+      properties:
+        employeeName:
+          type: string
+        currentStatus:
+          type: string
+          enum: [checked_in, checked_out, needs_review, unavailable]
+        activeSession:
+          allOf:
+            - $ref: "#/components/schemas/AttendanceSession"
+          nullable: true
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceSession"
+        pendingEvents:
+          type: number
+    SyncResult:
+      type: object
+      required: [accepted, duplicateEventIds, needsReview]
+      properties:
+        accepted:
+          type: number
+        duplicateEventIds:
+          type: array
+          items:
+            type: string
+        needsReview:
+          type: array
+          items:
+            type: string
+
