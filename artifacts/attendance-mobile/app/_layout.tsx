@@ -11,21 +11,68 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+/**
+ * IMPORTANT: importing this module at the app entry is what registers the
+ * background location and geofencing tasks with `TaskManager.defineTask`.
+ *
+ * Android relaunches the JS bundle headlessly to deliver geofence events; if
+ * the tasks were defined inside a component, they would not exist at that
+ * moment and exit events would be dropped silently.
+ */
+import '@/lib/background/tasks';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      // Attendance state changes underneath the UI (background task, server
+      // sweeper), so cached data is treated as stale immediately.
+      staleTime: 0,
+    },
+  },
+});
 
-function RootLayoutNav() {
+/**
+ * Redirect between the auth and app stacks based on session state.
+ *
+ * Runs in an effect rather than rendering a `<Redirect>` so that navigation
+ * happens after the root layout is mounted — expo-router warns otherwise.
+ */
+function RootNavigator() {
+  const { user, initialising } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (initialising) return;
+
+    const inAuthGroup = segments[0] === 'login';
+
+    if (!user && !inAuthGroup) {
+      router.replace('/login');
+    } else if (user && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [user, initialising, segments, router]);
+
   return (
     <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+      <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="scan"
+        options={{
+          headerShown: false,
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_bottom',
+        }}
+      />
     </Stack>
   );
 }
@@ -50,9 +97,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <RootLayoutNav />
+              <AuthProvider>
+                <RootNavigator />
+              </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

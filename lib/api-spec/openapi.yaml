@@ -3,13 +3,22 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: |
+    Multi-tenant employee attendance API.
+
+    Attendance is established by combining independent signals — an
+    authenticated identity, a workplace QR token, and a GPS fix inside the
+    workplace geofence. No single signal is sufficient on its own.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and session management
+  - name: workplaces
+    description: Workplace and QR administration
   - name: attendance
     description: Employee attendance operations
 paths:
@@ -26,11 +35,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Exchange credentials for an access and refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                installId: { type: string }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [auth]
+      summary: Rotate a refresh token for a new session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Refresh token invalid, expired, or reused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Revoke the presented refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "204":
+          description: Signed out
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: The authenticated user's profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+
   /attendance/me:
     get:
       operationId: getMyAttendance
       tags: [attendance]
-      summary: Get the current employee attendance overview
+      summary: Current attendance status and recent sessions
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Attendance overview
@@ -38,47 +138,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttendanceOverview"
+
+  /attendance/my-workplaces:
+    get:
+      operationId: getMyWorkplaces
+      tags: [attendance]
+      summary: Workplaces this employee may attend, with geofence parameters
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Assigned workplaces
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workplaces]
+                properties:
+                  workplaces:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AssignedWorkplace"
+
   /attendance/check-in:
     post:
       operationId: checkIn
       tags: [attendance]
-      summary: Record a QR and GPS verified check-in event
+      summary: Start a session after QR and geofence verification
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AttendanceEventInput"
+              $ref: "#/components/schemas/CheckInInput"
       responses:
         "201":
-          description: Attendance session started
+          description: Session started
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AttendanceSession"
+                $ref: "#/components/schemas/CheckInResult"
+        "409":
+          description: A session is already open
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+        "422":
+          description: Verification failed — no attendance was recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorBody"
+
   /attendance/check-out:
     post:
       operationId: checkOut
       tags: [attendance]
-      summary: Record a check-out event
+      summary: Close the open session manually
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AttendanceEventInput"
+              $ref: "#/components/schemas/CheckOutInput"
       responses:
-        "201":
-          description: Attendance session closed
+        "200":
+          description: Session closed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AttendanceSession"
-  /attendance/events/sync:
+                type: object
+                properties:
+                  sessionId: { type: string }
+                  status: { type: string }
+
+  /attendance/observations:
+    post:
+      operationId: recordObservation
+      tags: [attendance]
+      summary: Report a geofence transition or heartbeat
+      description: |
+        Sent by the device, including from the background task. Heartbeats
+        deliberately carry no coordinates — the server records only whether the
+        device was inside the authorised area.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObservationInput"
+      responses:
+        "200":
+          description: Observation processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObservationResult"
+
+  /attendance/sync:
     post:
       operationId: syncAttendanceEvents
       tags: [attendance]
-      summary: Synchronize offline attendance events
+      summary: Replay queued offline events
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -89,102 +254,392 @@ paths:
               properties:
                 events:
                   type: array
+                  maxItems: 200
                   items:
-                    $ref: "#/components/schemas/AttendanceEventInput"
+                    type: object
       responses:
         "200":
-          description: Synchronization result
+          description: Per-event outcomes
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SyncResult"
+
+  /attendance/signals:
+    post:
+      operationId: recordSignal
+      tags: [attendance]
+      summary: Report a device condition that interrupted tracking
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [signalType]
+              properties:
+                signalType:
+                  type: string
+                  enum:
+                    - gps_unavailable
+                    - gps_accuracy_poor
+                    - location_services_disabled
+                    - permission_revoked
+                    - background_permission_missing
+                    - battery_optimisation_active
+                    - device_offline
+                    - app_terminated
+                detail: { type: string }
+                occurredAt: { type: string, format: date-time }
+      responses:
+        "202":
+          description: Recorded
+
+  /attendance/history:
+    get:
+      operationId: getAttendanceHistory
+      tags: [attendance]
+      summary: The employee's own attendance history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, maximum: 365 }
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AttendanceSession"
+
+  /workplaces:
+    get:
+      operationId: listWorkplaces
+      tags: [workplaces]
+      summary: Workplaces in the caller's company
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Workplaces
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workplaces]
+                properties:
+                  workplaces:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Workplace"
+    post:
+      operationId: createWorkplace
+      tags: [workplaces]
+      summary: Create a workplace
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkplaceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workplace"
+
+  /workplaces/{id}/qr-token:
+    get:
+      operationId: getWorkplaceQrToken
+      tags: [workplaces]
+      summary: The workplace's current QR token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, mode]
+                properties:
+                  token: { type: string }
+                  mode: { type: string, enum: [rotating, static] }
+                  rotationSeconds: { type: number }
+                  expiresInSeconds: { type: number, nullable: true }
+                  workplaceName: { type: string }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
-    AttendanceEventInput:
+        status: { type: string }
+      required: [status]
+
+    ApiErrorBody:
       type: object
-      required: [eventId, eventType, workplaceId, occurredAt, latitude, longitude, accuracyMeters, qrToken]
+      required: [code, message]
       properties:
-        eventId:
+        code: { type: string }
+        message: { type: string }
+        distanceM: { type: number }
+
+    CurrentUser:
+      type: object
+      required: [id, email, fullName, role]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        fullName: { type: string }
+        role:
           type: string
+          enum: [super_admin, company_admin, manager, employee]
+        companyId: { type: string, nullable: true }
+        employeeId: { type: string, nullable: true }
+        employeeCode: { type: string, nullable: true }
+        jobTitle: { type: string, nullable: true }
+
+    SessionResponse:
+      type: object
+      required: [accessToken, refreshToken, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: number }
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+
+    Geofence:
+      type: object
+      required: [latitude, longitude, radiusM]
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+        radiusM: { type: number }
+
+    AssignedWorkplace:
+      type: object
+      required: [id, name, latitude, longitude, radiusM]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        latitude: { type: number }
+        longitude: { type: number }
+        radiusM: { type: number }
+        exitBufferM: { type: number }
+        maxAccuracyM: { type: number }
+        exitGraceSeconds: { type: number }
+        workStart: { type: string }
+        workEnd: { type: string }
+        isPrimary: { type: boolean }
+
+    Workplace:
+      type: object
+      required: [id, name, latitude, longitude, radiusM]
+      properties:
+        id: { type: string }
+        companyId: { type: string }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        latitude: { type: number }
+        longitude: { type: number }
+        radiusM: { type: number }
+        exitBufferM: { type: number }
+        maxAccuracyM: { type: number }
+        exitGraceSeconds: { type: number }
+        heartbeatTimeoutSeconds: { type: number }
+        qrMode: { type: string, enum: [rotating, static] }
+        qrRotationSeconds: { type: number }
+        timezone: { type: string }
+        workStart: { type: string }
+        workEnd: { type: string }
+        lateGraceMinutes: { type: number }
+        isActive: { type: boolean }
+
+    WorkplaceInput:
+      type: object
+      required: [name, latitude, longitude]
+      properties:
+        name: { type: string }
+        address: { type: string }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        radiusM: { type: number }
+        exitBufferM: { type: number }
+        maxAccuracyM: { type: number }
+        exitGraceSeconds: { type: number }
+        qrMode: { type: string, enum: [rotating, static] }
+        timezone: { type: string }
+        workStart: { type: string }
+        workEnd: { type: string }
+        lateGraceMinutes: { type: number }
+
+    DeviceContext:
+      type: object
+      properties:
+        installId: { type: string }
+        model: { type: string }
+        osName: { type: string }
+        osVersion: { type: string }
+        appVersion: { type: string }
+
+    CheckInInput:
+      type: object
+      required: [clientEventId, qrToken, latitude, longitude, accuracyM, occurredAt]
+      properties:
+        clientEventId: { type: string }
+        clientSequence: { type: number }
+        qrToken: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        accuracyM: { type: number }
+        isMocked: { type: boolean }
+        occurredAt: { type: string, format: date-time }
+        source: { type: string, enum: [online, offline, background] }
+        device:
+          $ref: "#/components/schemas/DeviceContext"
+
+    CheckOutInput:
+      type: object
+      required: [clientEventId, occurredAt]
+      properties:
+        clientEventId: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        accuracyM: { type: number }
+        isMocked: { type: boolean }
+        occurredAt: { type: string, format: date-time }
+        source: { type: string, enum: [online, offline, background] }
+
+    CheckInResult:
+      type: object
+      required: [sessionId, status]
+      properties:
+        sessionId: { type: string }
+        status: { type: string }
+        flags:
+          type: array
+          items: { type: string }
+        duplicate: { type: boolean }
+
+    ObservationInput:
+      type: object
+      required: [clientEventId, eventType, occurredAt]
+      properties:
+        clientEventId: { type: string }
+        clientSequence: { type: number }
         eventType:
           type: string
-          enum: [check_in, check_out]
-        workplaceId:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
-        latitude:
-          type: number
-        longitude:
-          type: number
-        accuracyMeters:
-          type: number
-        qrToken:
-          type: string
-        isMockLocation:
-          type: boolean
-        source:
-          type: string
-          enum: [online, offline, background]
+          enum: [geofence_enter, geofence_exit, heartbeat]
+        latitude: { type: number }
+        longitude: { type: number }
+        accuracyM: { type: number }
+        isMocked: { type: boolean }
+        occurredAt: { type: string, format: date-time }
+        source: { type: string, enum: [online, offline, background] }
+
+    ObservationResult:
+      type: object
+      required: [applied, decision]
+      properties:
+        applied: { type: boolean }
+        sessionId: { type: string, nullable: true }
+        status: { type: string, nullable: true }
+        decision: { type: string }
+
     AttendanceSession:
       type: object
       required: [id, status, workplaceName, checkInAt]
       properties:
-        id:
-          type: string
+        id: { type: string }
         status:
           type: string
-          enum: [checked_in, checked_out, needs_review]
-        workplaceName:
-          type: string
-        checkInAt:
-          type: string
-          format: date-time
-        checkOutAt:
-          type: string
-          format: date-time
-          nullable: true
-        durationMinutes:
-          type: number
+          enum: [checked_in, pending_exit, checked_out, needs_review]
+        workplaceName: { type: string }
+        checkInAt: { type: string, format: date-time }
+        checkOutAt: { type: string, format: date-time, nullable: true }
+        durationMinutes: { type: number, nullable: true }
+        isLate: { type: boolean }
+        lateByMinutes: { type: number, nullable: true }
+        needsReview: { type: boolean }
+        flags:
+          type: array
+          items: { type: string }
+        checkoutReason: { type: string, nullable: true }
+
+    ActiveSession:
+      type: object
+      required: [id, status, workplaceId, workplaceName, checkInAt, geofence]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [checked_in, pending_exit] }
+        workplaceId: { type: string }
+        workplaceName: { type: string }
+        checkInAt: { type: string, format: date-time }
+        exitGraceUntil: { type: string, format: date-time, nullable: true }
+        geofence:
+          $ref: "#/components/schemas/Geofence"
+
     AttendanceOverview:
       type: object
-      required: [employeeName, currentStatus, sessions, pendingEvents]
+      required: [currentStatus, sessions]
       properties:
-        employeeName:
-          type: string
         currentStatus:
           type: string
-          enum: [checked_in, checked_out, needs_review, unavailable]
+          enum: [checked_in, pending_exit, checked_out, needs_review]
         activeSession:
-          allOf:
-            - $ref: "#/components/schemas/AttendanceSession"
-          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/ActiveSession"
+            - type: "null"
         sessions:
           type: array
           items:
             $ref: "#/components/schemas/AttendanceSession"
-        pendingEvents:
-          type: number
+
     SyncResult:
       type: object
-      required: [accepted, duplicateEventIds, needsReview]
+      required: [accepted, duplicates, rejected, results]
       properties:
-        accepted:
-          type: number
-        duplicateEventIds:
+        accepted: { type: number }
+        duplicates: { type: number }
+        rejected: { type: number }
+        results:
           type: array
           items:
-            type: string
-        needsReview:
-          type: array
-          items:
-            type: string
-
+            type: object
+            required: [clientEventId, status]
+            properties:
+              clientEventId: { type: string }
+              status:
+                type: string
+                enum: [accepted, duplicate, rejected]
+              code: { type: string }
+              message: { type: string }

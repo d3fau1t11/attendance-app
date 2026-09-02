@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Attendance Mobile",
+    "name": "Attendance",
     "slug": "attendance-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,19 +14,25 @@
       "backgroundColor": "#f4f8f7"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch"],
+        "NSLocationWhenInUseUsageDescription": "Your location is checked against your workplace boundary to record attendance.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Background location lets the app check you out automatically when you leave the workplace, even if the app is closed."
+      }
     },
     "android": {
       "package": "com.replit.attendancemobile",
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "CAMERA",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ]
     },
     "web": {
@@ -40,16 +46,28 @@
         }
       ],
       "expo-font",
+      "expo-secure-store",
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Attendance Mobile to scan workplace QR codes."
+          "cameraPermission": "Allow Attendance to scan workplace QR codes."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Attendance Mobile to verify you are within your workplace."
+          "locationWhenInUsePermission": "Your location is checked against your workplace boundary to record attendance.",
+          "locationAlwaysAndWhenInUsePermission": "Background location lets the app check you out automatically when you leave the workplace, even if the app is closed.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ],
       "expo-web-browser"
