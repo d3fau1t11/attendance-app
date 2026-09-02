@@ -1,6 +1,13 @@
 import pino from "pino";
 
-const isProduction = process.env.NODE_ENV === "production";
+const isServerless = Boolean(
+  process.env.NETLIFY ||
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.FUNCTIONS_WORKER_RUNTIME
+);
+
+const isProduction = process.env.NODE_ENV === "production" || isServerless;
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
