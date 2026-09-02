@@ -166,7 +166,7 @@ export default function HomeScreen() {
             title={`${rejectedCount} event${rejectedCount === 1 ? '' : 's'} not accepted`}
             message="The server declined these. Open Profile to see why."
             actionLabel="View"
-            onAction={() => router.push('/(tabs)/profile')}
+            onAction={() => router.push('/(tabs)/profile' as any)}
           />
         )}
 
@@ -185,7 +185,7 @@ export default function HomeScreen() {
           session={active}
           lastFix={lastFix}
           onScan={() =>
-            router.push(isCheckedIn ? '/scan?mode=check_out' : '/scan')
+            router.push((isCheckedIn ? '/scan?mode=check_out' : '/scan') as any)
           }
           disabled={!readiness?.canCheckIn}
         />
@@ -194,7 +194,7 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
             Recent attendance
           </Text>
-          <Pressable onPress={() => router.push('/(tabs)/history')} hitSlop={8}>
+          <Pressable onPress={() => router.push('/(tabs)/history' as any)} hitSlop={8}>
             <Text style={[styles.link, { color: colors.primary }]}>See all</Text>
           </Pressable>
         </View>

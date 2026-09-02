@@ -52,12 +52,12 @@ function RootNavigator() {
   useEffect(() => {
     if (initialising) return;
 
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = (segments as string[])[0] === 'login';
 
     if (!user && !inAuthGroup) {
-      router.replace('/login');
+      router.replace('/login' as any);
     } else if (user && inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)' as any);
     }
   }, [user, initialising, segments, router]);
 

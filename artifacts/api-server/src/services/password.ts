@@ -1,7 +1,12 @@
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
-const scryptAsync = promisify(scrypt);
+const scryptAsync = promisify(scrypt) as (
+  password: string | Buffer,
+  salt: string | Buffer,
+  keylen: number,
+  options: { N?: number; r?: number; p?: number; maxmem?: number },
+) => Promise<Buffer>;
 
 /**
  * scrypt parameters. N=2^15 with r=8 costs roughly 100ms and ~32MB per hash on

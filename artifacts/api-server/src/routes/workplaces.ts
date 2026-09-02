@@ -170,7 +170,7 @@ router.patch("/workplaces/:id", ...adminOnly, async (req, res) => {
     .set(patch)
     .where(
       and(
-        eq(workplaces.id, req.params.id),
+        eq(workplaces.id, req.params.id as string),
         eq(workplaces.companyId, req.auth!.companyId!),
       ),
     )
@@ -202,7 +202,7 @@ router.post("/workplaces/:id/rotate-secret", ...adminOnly, async (req, res) => {
     .set({ qrSecret: generateQrSecret(), updatedAt: new Date() })
     .where(
       and(
-        eq(workplaces.id, req.params.id),
+        eq(workplaces.id, req.params.id as string),
         eq(workplaces.companyId, req.auth!.companyId!),
       ),
     )
@@ -233,7 +233,7 @@ router.get("/workplaces/:id/qr-token", async (req, res) => {
   const [workplace] = await db
     .select()
     .from(workplaces)
-    .where(eq(workplaces.id, req.params.id))
+    .where(eq(workplaces.id, req.params.id as string))
     .limit(1);
 
   if (!workplace || !workplace.isActive) {
@@ -270,7 +270,7 @@ router.get("/workplaces/:id/qr.svg", async (req, res) => {
   const [workplace] = await db
     .select()
     .from(workplaces)
-    .where(eq(workplaces.id, req.params.id))
+    .where(eq(workplaces.id, req.params.id as string))
     .limit(1);
 
   if (!workplace || !workplace.isActive) {
@@ -309,7 +309,7 @@ router.get("/workplaces/:id/kiosk", async (req, res) => {
   const [workplace] = await db
     .select()
     .from(workplaces)
-    .where(eq(workplaces.id, req.params.id))
+    .where(eq(workplaces.id, req.params.id as string))
     .limit(1);
 
   if (!workplace || !workplace.isActive) {
