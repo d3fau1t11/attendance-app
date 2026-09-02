@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "pnpm run typecheck && pnpm -r --if-present run build",
+  "buildCommand": "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build",
   "installCommand": "pnpm install",
   "rewrites": [
     {
