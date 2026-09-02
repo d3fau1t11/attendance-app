@@ -1,0 +1,12 @@
+[build]
+  command = "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build"
+  functions = "netlify/functions"
+  publish = "artifacts/api-server/dist"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
