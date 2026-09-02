@@ -1,7 +1,3 @@
-import { ReplitConnectors } from "@replit/connectors-sdk";
-
-const connectors = new ReplitConnectors();
-
 export async function supabaseRequest(
   path: string,
   init: RequestInit = {},
@@ -27,14 +23,9 @@ export async function supabaseRequest(
     });
   }
 
-  return connectors.proxy("supabase", `/rest/v1/${path}`, {
-    ...init,
-    headers: Object.fromEntries([
-      ["Content-Type", "application/json"],
-      ["Accept", "application/json"],
-      ...new Headers(init.headers).entries(),
-    ]),
-  });
+  throw new Error(
+    "SUPABASE_URL and SUPABASE_KEY environment variables must be configured.",
+  );
 }
 
 export async function readSupabase<T>(path: string): Promise<T> {
