@@ -1,5 +1,4 @@
 import serverless from "serverless-http";
-// @ts-ignore
-import app from "../../artifacts/api-server/dist/app.mjs";
+import app from "../../artifacts/api-server/src/app";
 
 export const handler = serverless(app);

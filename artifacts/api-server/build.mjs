@@ -115,10 +115,17 @@ async function buildAll() {
 import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
 
-globalThis.require = __bannerCrReq(import.meta.url);
-globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
-globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
-    `,
+if (typeof globalThis.require === 'undefined') {
+  const __metaUrl = typeof import.meta !== 'undefined' && import.meta?.url ? import.meta.url : ('file://' + process.cwd() + '/index.js');
+  globalThis.require = __bannerCrReq(__metaUrl);
+}
+if (typeof globalThis.__filename === 'undefined') {
+  globalThis.__filename = typeof import.meta !== 'undefined' && import.meta?.url ? __bannerUrl.fileURLToPath(import.meta.url) : process.cwd();
+}
+if (typeof globalThis.__dirname === 'undefined') {
+  globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+}
+`,
     },
   });
 }
