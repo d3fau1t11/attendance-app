@@ -1,20 +1,12 @@
 /**
  * Semantic design tokens for the mobile app.
  *
- * These tokens mirror the naming conventions used in web artifacts (index.css)
- * so that multi-artifact projects share a cohesive visual identity.
- *
- * Replace the placeholder values below with values that match the project's
- * brand. If a sibling web artifact exists, read its index.css and convert the
- * HSL values to hex so both artifacts use the same palette.
- *
- * To add dark mode, add a `dark` key with the same token names.
- * The useColors() hook will automatically pick it up.
+ * Light & Dark theme color palettes with cohesive modern styling.
  */
 
 const colors = {
   light: {
-    // Legacy aliases (kept for backward compatibility)
+    // Legacy aliases
     text: '#12202a',
     tint: '#18b887',
 
@@ -51,8 +43,44 @@ const colors = {
     input: '#c8dbd4',
   },
 
-  // Border radius (in px). Sync from the sibling web artifact's --radius
-  // CSS variable. This value applies to cards, buttons, inputs, and modals.
+  dark: {
+    // Legacy aliases
+    text: '#f0f6fc',
+    tint: '#2dd4bf',
+
+    // Core surfaces
+    background: '#0d1117',
+    foreground: '#f0f6fc',
+
+    // Cards / elevated surfaces
+    card: '#161b22',
+    cardForeground: '#f0f6fc',
+
+    // Primary action color
+    primary: '#14b8a6',
+    primaryForeground: '#0d1117',
+
+    // Secondary surfaces
+    secondary: '#1c2128',
+    secondaryForeground: '#2dd4bf',
+
+    // Muted elements
+    muted: '#21262d',
+    mutedForeground: '#8b949e',
+
+    // Accent highlights
+    accent: '#1e3a34',
+    accentForeground: '#2dd4bf',
+
+    // Destructive actions
+    destructive: '#f85149',
+    destructiveForeground: '#ffffff',
+
+    // Borders and inputs
+    border: '#30363d',
+    input: '#30363d',
+  },
+
   radius: 8,
 };
 

@@ -4,7 +4,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -12,11 +11,11 @@ import { Feather } from '@expo/vector-icons';
 import * as Device from 'expo-device';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
   checkReadiness,
   openAppSettings,
-  openLocationSettings,
   requestBackground,
   requestBatteryOptimisationExemption,
   requestForeground,
@@ -30,19 +29,13 @@ import {
   type OutboxEvent,
 } from '@/lib/outbox/store';
 import { syncOutbox } from '@/lib/outbox/sync';
-import { getBaseUrl } from '@/lib/api/config';
-import { ServerUrlSheet } from '@/components/ServerUrlSheet';
 
 /**
- * Diagnostics and account controls.
- *
- * The permission health section exists because silent tracking failure is the
- * defining failure mode of attendance apps: everything looks fine until a
- * month of missing check-outs surfaces. Here the user can see, at a glance,
- * whether tracking will actually work.
+ * Diagnostics, theme preferences, and account controls.
  */
 export default function ProfileScreen() {
   const colors = useColors();
+  const { mode, setMode, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
 
@@ -53,23 +46,19 @@ export default function ProfileScreen() {
   });
   const [pending, setPending] = useState(0);
   const [rejected, setRejected] = useState<OutboxEvent[]>([]);
-  const [baseUrl, setBaseUrl] = useState('');
-  const [serverSheet, setServerSheet] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
-    const [report, status, pendingCount, rejectedList, url] = await Promise.all([
+    const [report, status, pendingCount, rejectedList] = await Promise.all([
       checkReadiness(),
       getTrackingStatus(),
       countPending(),
       getRejected(),
-      getBaseUrl(),
     ]);
     setReadiness(report);
     setTracking(status);
     setPending(pendingCount);
     setRejected(rejectedList);
-    setBaseUrl(url);
   }, []);
 
   useEffect(() => {
@@ -129,6 +118,49 @@ export default function ProfileScreen() {
             </Text>
           </View>
         </View>
+
+        <Section title="Appearance">
+          <View style={styles.themeHeader}>
+            <Feather name={isDark ? "moon" : "sun"} size={17} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+                Theme
+              </Text>
+              <Text style={[styles.actionDetail, { color: colors.mutedForeground }]}>
+                {mode === 'system' ? 'Following device theme' : mode === 'dark' ? 'Dark mode enabled' : 'Light mode enabled'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.themePicker, { borderTopColor: colors.border }]}>
+            {(['system', 'light', 'dark'] as const).map((tMode) => {
+              const active = mode === tMode;
+              return (
+                <Pressable
+                  key={tMode}
+                  onPress={() => void setMode(tMode)}
+                  style={[
+                    styles.themeOption,
+                    {
+                      backgroundColor: active ? colors.primary : colors.muted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      {
+                        color: active ? colors.primaryForeground : colors.mutedForeground,
+                      },
+                    ]}
+                  >
+                    {tMode === 'system' ? 'System' : tMode === 'light' ? 'Light' : 'Dark'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Section>
 
         <Section title="Tracking health">
           <HealthRow
@@ -191,8 +223,6 @@ export default function ProfileScreen() {
             neutral={!tracking.locationUpdatesActive}
           />
 
-          {/* No API can reliably report battery-optimisation state, so this is
-              offered as an action rather than shown as a status. */}
           <Pressable
             onPress={() => void requestBatteryOptimisationExemption()}
             style={[styles.actionRow, { borderTopColor: colors.border }]}
@@ -271,41 +301,19 @@ export default function ProfileScreen() {
           ))}
         </Section>
 
-        <Section title="Privacy">
+        <Section title="Privacy & Device">
           <View style={styles.privacy}>
             <Feather name="shield" size={17} color={colors.primary} />
             <Text style={[styles.privacyText, { color: colors.mutedForeground }]}>
               Your location is used only to check whether you are inside your
               workplace boundary. Coordinates are recorded at check-in and
-              check-out for verification; routine background checks store only
-              whether you were inside, never a movement history.
+              check-out for verification.
             </Text>
           </View>
-        </Section>
-
-        <Section title="Connection">
-          <Pressable
-            onPress={() => setServerSheet(true)}
-            style={styles.actionRow}
-          >
-            <Feather name="server" size={17} color={colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-                Server address
-              </Text>
-              <Text
-                style={[styles.actionDetail, { color: colors.mutedForeground }]}
-                numberOfLines={1}
-              >
-                {baseUrl || 'Not configured'}
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={17} color={colors.mutedForeground} />
-          </Pressable>
 
           <View style={[styles.deviceRow, { borderTopColor: colors.border }]}>
             <Text style={[styles.deviceLabel, { color: colors.mutedForeground }]}>
-              Device
+              Device Info
             </Text>
             <Text style={[styles.deviceValue, { color: colors.foreground }]}>
               {Device.modelName ?? 'Unknown'} · {Device.osName}{' '}
@@ -321,14 +329,6 @@ export default function ProfileScreen() {
           </Text>
         </Pressable>
       </ScrollView>
-
-      <ServerUrlSheet
-        visible={serverSheet}
-        onClose={() => {
-          setServerSheet(false);
-          void load();
-        }}
-      />
     </View>
   );
 }
@@ -431,6 +431,29 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   card: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  themeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    padding: 14,
+  },
+  themePicker: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  themeOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeOptionText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
   healthRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

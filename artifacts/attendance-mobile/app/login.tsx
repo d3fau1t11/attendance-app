@@ -15,8 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ApiError, NetworkError } from '@/lib/api/client';
-import { ServerUrlSheet } from '@/components/ServerUrlSheet';
-
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -27,7 +25,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverSheetOpen, setServerSheetOpen] = useState(false);
 
   const submit = async () => {
     if (busy) return;
@@ -41,13 +38,9 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       await signIn(email, password);
-      // Navigation happens automatically: the root layout swaps stacks once
-      // `user` is set.
     } catch (e) {
       if (e instanceof NetworkError) {
-        setError(
-          'Cannot reach the server. Check your connection, or tap "Server settings" to confirm the address.',
-        );
+        setError('Cannot reach the server. Please check your internet connection.');
       } else if (e instanceof ApiError) {
         setError(e.message);
       } else {
@@ -173,24 +166,8 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Sign in</Text>
             )}
           </Pressable>
-
-          <Pressable
-            onPress={() => setServerSheetOpen(true)}
-            style={styles.serverLink}
-            hitSlop={8}
-          >
-            <Feather name="server" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.serverText, { color: colors.mutedForeground }]}>
-              Server settings
-            </Text>
-          </Pressable>
         </View>
       </ScrollView>
-
-      <ServerUrlSheet
-        visible={serverSheetOpen}
-        onClose={() => setServerSheetOpen(false)}
-      />
     </KeyboardAvoidingView>
   );
 }

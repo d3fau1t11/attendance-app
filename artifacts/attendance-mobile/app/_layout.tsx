@@ -25,6 +25,8 @@ import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
  */
 import '@/lib/background/tasks';
 
+import { ThemeProvider } from '@/lib/theme/ThemeContext';
+
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -99,9 +101,11 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AuthProvider>
-                <RootNavigator />
-              </AuthProvider>
+              <ThemeProvider>
+                <AuthProvider>
+                  <RootNavigator />
+                </AuthProvider>
+              </ThemeProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
