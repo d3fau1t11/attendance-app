@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -13,6 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import {
+  authenticateBiometric,
+  getBiometricStatus,
+  isBiometricsEnabled,
+  setBiometricsEnabled,
+  type BiometricStatus,
+} from '@/lib/security/biometrics';
 import {
   checkReadiness,
   openAppSettings,
@@ -48,22 +56,62 @@ export default function ProfileScreen() {
   const [rejected, setRejected] = useState<OutboxEvent[]>([]);
   const [syncing, setSyncing] = useState(false);
 
+  const [biometricsStatus, setBiometricsStatus] = useState<BiometricStatus | null>(null);
+  const [biometricsEnabled, setBiometricsEnabledState] = useState(false);
+  const [togglingBiometrics, setTogglingBiometrics] = useState(false);
+
   const load = useCallback(async () => {
-    const [report, status, pendingCount, rejectedList] = await Promise.all([
+    const [report, status, pendingCount, rejectedList, bioStatus, bioEnabled] = await Promise.all([
       checkReadiness(),
       getTrackingStatus(),
       countPending(),
       getRejected(),
+      getBiometricStatus(),
+      isBiometricsEnabled(),
     ]);
     setReadiness(report);
     setTracking(status);
     setPending(pendingCount);
     setRejected(rejectedList);
+    setBiometricsStatus(bioStatus);
+    setBiometricsEnabledState(bioEnabled);
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleToggleBiometrics = async (nextValue: boolean) => {
+    if (!biometricsStatus?.hasHardware) {
+      Alert.alert('Not Available', 'Biometric hardware is not available on this device.');
+      return;
+    }
+    if (!biometricsStatus.isEnrolled) {
+      Alert.alert(
+        'Not Enrolled',
+        `No enrolled ${biometricsStatus.biometricType} found on device. Please register biometrics in system settings first.`
+      );
+      return;
+    }
+
+    setTogglingBiometrics(true);
+    const promptMsg = nextValue
+      ? `Authenticate to enable ${biometricsStatus.biometricType} lock`
+      : `Authenticate to disable ${biometricsStatus.biometricType} lock`;
+    const authenticated = await authenticateBiometric(promptMsg);
+    setTogglingBiometrics(false);
+
+    if (authenticated) {
+      await setBiometricsEnabled(nextValue);
+      setBiometricsEnabledState(nextValue);
+      Alert.alert(
+        'Biometric Security Updated',
+        nextValue
+          ? `${biometricsStatus.biometricType} lock enabled. The app will require authentication when opened or resumed.`
+          : `${biometricsStatus.biometricType} lock disabled.`
+      );
+    }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -299,6 +347,43 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
           ))}
+        </Section>
+
+        <Section title="Security & Biometrics">
+          <View style={styles.actionRow}>
+            <Feather name="shield" size={17} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+                {biometricsStatus?.biometricType ?? 'Biometric Hardware'}
+              </Text>
+              <Text style={[styles.actionDetail, { color: colors.mutedForeground }]}>
+                {!biometricsStatus?.hasHardware
+                  ? 'Not available on this device'
+                  : !biometricsStatus.isEnrolled
+                  ? 'No enrolled face/fingerprint in system settings'
+                  : `${biometricsStatus.biometricType} registered & ready`}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
+            <Feather name="lock" size={17} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+                Biometric Lock
+              </Text>
+              <Text style={[styles.actionDetail, { color: colors.mutedForeground }]}>
+                Require {biometricsStatus?.biometricType ?? 'biometrics'} when opening or resuming app
+              </Text>
+            </View>
+            <Switch
+              value={biometricsEnabled}
+              onValueChange={(val) => void handleToggleBiometrics(val)}
+              disabled={togglingBiometrics || !biometricsStatus?.isEnrolled}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
         </Section>
 
         <Section title="Privacy & Device">

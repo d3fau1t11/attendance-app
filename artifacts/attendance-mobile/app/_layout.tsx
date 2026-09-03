@@ -14,6 +14,7 @@ import {
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
+import { BiometricGuard } from '@/components/BiometricGuard';
 
 /**
  * IMPORTANT: importing this module at the app entry is what registers the
@@ -103,7 +104,9 @@ export default function RootLayout() {
             <KeyboardProvider>
               <ThemeProvider>
                 <AuthProvider>
-                  <RootNavigator />
+                  <BiometricGuard>
+                    <RootNavigator />
+                  </BiometricGuard>
                 </AuthProvider>
               </ThemeProvider>
             </KeyboardProvider>
