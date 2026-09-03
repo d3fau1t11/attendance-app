@@ -1,7 +1,7 @@
 [build]
-  command = "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build"
+  command = "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/attendance-web run build"
   functions = "netlify/functions"
-  publish = "artifacts/api-server/dist"
+  publish = "artifacts/attendance-web/dist"
 
 [functions]
   node_bundler = "esbuild"
@@ -11,3 +11,9 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
