@@ -19,6 +19,7 @@ interface AttendanceSession {
   id: string;
   status: "checked_in" | "pending_exit" | "checked_out" | "needs_review";
   checkInAt: string;
+  serverReceivedAt?: string;
   checkOutAt: string | null;
   checkoutReason: string | null;
   durationMinutes: number | null;
@@ -211,14 +212,28 @@ export function Attendance() {
                         {session.workplaceName}
                       </td>
 
-                      {/* Check In */}
+                      {/* Check In (Phone & Server Timestamps) */}
                       <td className="py-4 px-6 font-mono text-slate-300">
-                        {new Date(session.checkInAt).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5 text-xs text-indigo-300 font-semibold">
+                            <span className="text-[10px] uppercase font-sans text-slate-400 font-normal">Phone:</span>
+                            {new Date(session.checkInAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </div>
+                          {session.serverReceivedAt && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                              <span className="text-[10px] uppercase font-sans text-slate-500 font-normal">Server:</span>
+                              {new Date(session.serverReceivedAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Check Out */}

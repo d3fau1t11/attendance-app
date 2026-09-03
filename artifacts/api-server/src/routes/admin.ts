@@ -140,6 +140,7 @@ router.get("/admin/attendance", async (req, res) => {
         id: attendanceSessions.id,
         status: attendanceSessions.status,
         checkInAt: attendanceSessions.checkInAt,
+        createdAt: attendanceSessions.createdAt,
         checkOutAt: attendanceSessions.checkOutAt,
         checkoutReason: attendanceSessions.checkoutReason,
         durationMinutes: attendanceSessions.durationMinutes,
@@ -169,6 +170,7 @@ router.get("/admin/attendance", async (req, res) => {
       sessions: rows.map((r) => ({
         ...r,
         checkInAt: r.checkInAt.toISOString(),
+        serverReceivedAt: r.createdAt ? r.createdAt.toISOString() : r.checkInAt.toISOString(),
         checkOutAt: r.checkOutAt?.toISOString() ?? null,
       })),
       limit,

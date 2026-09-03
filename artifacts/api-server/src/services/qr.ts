@@ -23,11 +23,10 @@ const TOKEN_VERSION = "v1";
 /**
  * Windows of clock skew tolerated on either side of the current counter.
  *
- * One step each way covers the realistic cases — a phone whose clock is a few
- * seconds off, or a scan that happens just as the code rotates — without
- * meaningfully extending the life of a shared screenshot.
+ * Tolerates up to 5 rotation steps (~2.5 minutes) to account for mobile phone
+ * clock drift and network transmission latency when scanning real-time QR codes.
  */
-const SKEW_WINDOWS = 1;
+const SKEW_WINDOWS = 5;
 
 export function generateQrSecret(): string {
   return randomBytes(32).toString("hex");

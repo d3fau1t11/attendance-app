@@ -160,6 +160,12 @@ router.patch("/workplaces/:id", ...adminOnly, async (req, res) => {
   for (const key of ["name", "address", "timezone", "workStart", "workEnd"]) {
     if (body[key] !== undefined) patch[key] = String(body[key]);
   }
+  if (body.latitude !== undefined && Number.isFinite(Number(body.latitude))) {
+    patch.latitude = Number(body.latitude);
+  }
+  if (body.longitude !== undefined && Number.isFinite(Number(body.longitude))) {
+    patch.longitude = Number(body.longitude);
+  }
   if (body.qrMode === "rotating" || body.qrMode === "static") {
     patch.qrMode = body.qrMode;
   }
